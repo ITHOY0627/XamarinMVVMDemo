@@ -1,12 +1,43 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.ComponentModel;
+using System.Linq;
 using System.Text;
+using System.Threading.Tasks;
+using System.Windows.Input;
+using Xamarin.CommunityToolkit.ObjectModel;
+using Xamarin.Forms;
+using XamarinMVVMDemo.Models;
 
 namespace XamarinMVVMDemo.ViewModel
 {
-    public class MainPageViewModel: INotifyPropertyChanged
+    public class MainPageViewModel : BaseViewModel
     {
+        private ObservableRangeCollection<UserModel> _users = new ObservableRangeCollection<UserModel>();
+
+        //변수
+        private string _userID;
+        private string _userName;
+        private string _email;
+        private string _telephone;
+        private DateTime? _registDate;
+        
+        //Property
+        public string UserID { get => this._userID; set => SetProperty(ref this._userID, value); }
+        public string UserName { get => this._userName; set => SetProperty(ref this._userName, value); }
+        public string Email { get => this._email; set => SetProperty(ref this._email, value); }
+        public string Telephone { get => this._telephone; set => SetProperty(ref this._telephone, value); }
+        public DateTime? RegistDate { get => this._registDate; set => SetProperty(ref this._registDate, value); }
+        public ObservableRangeCollection<UserModel> Users { get => this._users; set => SetProperty(ref this._users, value); }
+
+        //Command
+        public ICommand RegistCommand { get; }
+        public ICommand ModifyCommand { get; }
+        public ICommand DeleteCommand { get; }
+        public ICommand SelectUserCommand { get; }
+        public ICommand ResetCommand { get; }
+
+
         public MainPageViewModel()
         {
             this.UserID = "Eddy.Kim";
@@ -14,76 +45,124 @@ namespace XamarinMVVMDemo.ViewModel
             this.Email = "admin@signalsoft.co.kr";
             this.Telephone = "010-2760-5246";
             this.RegistDate = DateTime.Now;
+
+            RegistCommand = new Command(() => Regist(), () => IsControlEnable);
+            ModifyCommand = new Command(() => Modify(), () => IsControlEnable);
+            DeleteCommand = new Command(() => Delete(), () => IsControlEnable);
+            ResetCommand = new Command(() => Reset(), () => IsControlEnable);
+            SelectUserCommand = new Command<Models.UserModel>((obj) => SelectUser(obj), (obj) => IsControlEnable);
         }
 
-        private string _UserID;
-        public string UserID
+        private void Regist()
         {
-            get { return this._UserID; }
-            set
+            IsControlEnable = false;
+            IsBusy = true;
+            (RegistCommand as Command).ChangeCanExecute();
+
+
+            UserModel model = new UserModel()
             {
-                if (_UserID == value) return;
-                _UserID = value;
-                OnPropertyChanged("UserID");
-            }
-        }
-        
-        private string _UserName;
-        public string UserName
-        {
-            get { return _UserName; }
-            set {
-                    if (_UserName == value) return;
-                    _UserName = value;
-                    OnPropertyChanged("UserName");
-                }
+                UserID = this.UserID,
+                UserName = this.UserName,
+                Email = this.Email,
+                Telephone = this.Telephone,
+                RegistDate = DateTime.Now
+            };
+
+            Users.Add(model);
+
+            IsControlEnable = true;
+            IsBusy = false;
+            (RegistCommand as Command).ChangeCanExecute();
         }
 
-        private string _Email;
-        public string Email
+
+        private void Modify()
         {
-            get { return _Email; }
-            set
+            IsControlEnable = false;
+            IsBusy = true;
+            (ModifyCommand as Command).ChangeCanExecute();
+
+            //UserModel model = new UserModel()
+            //{
+            //    UserID = this.UserID,
+            //    UserName = this.UserName,
+            //    Email = this.Email,
+            //    Telephone = this.Telephone,
+            //    RegistDate = DateTime.Now
+            //};
+
+            var user = Users.Where(i  => i.UserID == this.UserID).FirstOrDefault();
+
+            if(user != null)
             {
-                if (_Email == value) return;
-                _Email = value;
-                OnPropertyChanged("email");
-            }
+                user.UserName = this.UserName;
+                user.Email = this.Email;
+                user.Telephone = this.Telephone;
+                user.RegistDate = this.RegistDate;
+            }            
+
+            IsControlEnable = true;
+            IsBusy = false;
+            (ModifyCommand as Command).ChangeCanExecute();
         }
 
-        private string _Telephone;
-        public string Telephone
+
+
+        private void Delete()
         {
-            get { return _Telephone; }
-            set
+            IsControlEnable = false;
+            IsBusy = true;
+            (DeleteCommand as Command).ChangeCanExecute();
+
+            var user = Users.Where(i => i.UserID == this.UserID).FirstOrDefault();
+
+            if (user != null)
             {
-                if (_Telephone == value) return;
-                _Telephone = value;
-                OnPropertyChanged("Telephone");
+                Users.Remove(user);
             }
+
+            IsControlEnable = true;
+            IsBusy = false;
+            (DeleteCommand as Command).ChangeCanExecute();
         }
 
-        private DateTime? _RegistDate;
-        public DateTime? RegistDate
+        private void Reset()
         {
-            get { return _RegistDate; }
-            set
-            {
-                if (_RegistDate == value) return;
-                _RegistDate = value;
-                OnPropertyChanged("RegistDate");
-            }
+            IsControlEnable = false;
+            IsBusy = true;
+            (DeleteCommand as Command).ChangeCanExecute();
+
+            this.UserName = string.Empty;
+            this.Email = string.Empty;
+            this.Telephone = string.Empty;
+            this.UserID = string.Empty;
+            this.RegistDate = null;
+
+            IsControlEnable = true;
+            IsBusy = false;
+            (DeleteCommand as Command).ChangeCanExecute();
         }
+                
 
-        public event PropertyChangedEventHandler PropertyChanged;
-
-        protected virtual void OnPropertyChanged(string propertyName)
+        private void SelectUser(Models.UserModel user)
         {
-            if(PropertyChanged != null)
-            {
-                PropertyChanged(this, new PropertyChangedEventArgs(propertyName));
-            }
-        }
+            IsControlEnable = false;
+            IsBusy = true;
+            (SelectUserCommand as Command).ChangeCanExecute();
 
-    }//public class
+            if (user != null)
+            {
+                this.UserID = user.UserID;
+                this.UserName = user.UserName;
+                this.Email = user.Email;
+                this.Telephone = user.Telephone;
+                this.RegistDate = user.RegistDate;
+            }
+
+            IsControlEnable = true;
+            IsBusy = false;
+            (SelectUserCommand as Command).ChangeCanExecute();
+        }
+    }
 }
